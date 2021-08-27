@@ -1,3 +1,7 @@
+"""
+Stolen with love from Brae Webb.
+"""
+
 import re
 import sys
 from typing import Dict, Iterable, List
@@ -9,31 +13,22 @@ def traverse(modules: Iterable[pdoc.Module]):
         yield mod
         for submod in mod.submodules():
             yield from traverse(submod)
-
-class Transcriber(object):
-    # Takes an assignment file and creates a structured version of the data
-    def __init__(self, files: List[str]) -> None:
-        self._modules = files  # Public submodules are auto-imported
-        context = pdoc.Context()
-
-        self._modules = [pdoc.Module(mod, context=context)
-                for mod in self._modules]
-        pdoc.link_inheritance(context)
-
-    def traverse_modules(self):
-        return traverse(self._modules)
         
-
 class Formatter(object):
     """Takes in a structure iterable and generates the appropriate formatted
     documentation"""
     
-    def __init__(self, modules: Iterable[pdoc.Module], markers: Dict[str, str]) -> None:
-        self._modules = modules
+    def __init__(self, files: List[str], markers: Dict[str, str]) -> None:
+        self._modules = files  # Public submodules are auto-imported
         self._markers = markers
 
+        context = pdoc.Context()
+        self._modules = [pdoc.Module(mod, context=context)
+                for mod in self._modules]
+        pdoc.link_inheritance(context)
+
     def export(self):
-        for mod in self._modules:
+        for mod in traverse(self._modules):
             for clazz in mod.classes(sort=False):
                 if clazz.name in self._markers:
                     self.format_marker(clazz.name)

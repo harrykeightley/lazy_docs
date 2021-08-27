@@ -24,13 +24,10 @@ def main():
     if not file.endswith('.py'):
         print("Not a valid python file.", file=sys.stderr)
         return
-    
-    # Generate model of file
-    transcriber = Transcriber([file])
 
     # Generate docs from model
     markers = {}
-    f = LatexFormatter(transcriber.traverse_modules(), markers)
+    f = LatexFormatter([file], markers)
     f.export()
 
 if __name__ == "__main__":
