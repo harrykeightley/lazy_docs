@@ -72,6 +72,7 @@ class LatexFormatter(Formatter):
             self.format_method(method)
             
     def format_method(self, method):
+        print("\\vspace{8mm}")
         params = ", ".join(method.params(annotate=True))
         method_signature = _sanitize(method.name)
         method_signature += "(" + convert_type(params) + ")"
