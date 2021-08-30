@@ -27,52 +27,105 @@ class Formatter(object):
                 for mod in self._modules]
         pdoc.link_inheritance(context)
 
-    def export(self):
+        self._body = []
+
+    def export(self, file):
+        """Exports the documentation to the supplied file for a given format."""
+        self._clear()
+        self._build()
+        with open(file, 'w') as outfile:
+            outfile.write(self._format(self._body))
+
+    def _clear(self):
+        self._body = []
+
+    def _format(self, body) -> str:
+        """Formats and returns the built components stored in the body """
+        raise NotImplementedError()
+
+    def _build(self):
         for mod in traverse(self._modules):
             for clazz in mod.classes(sort=False):
                 if clazz.name in self._markers:
-                    self.format_marker(clazz.name)
+                    self._add_marker(clazz.name)
                     
-                self.format_class(clazz)
+                self._add_class(clazz)
                 all_methods = clazz.methods(include_inherited=False, sort=False)
                 for method in all_methods:
-                    self.format_method(method)
+                    self._add_method(method)
 
-    def format_marker(self, marker):
+    def _add_marker(self, marker):
         raise NotImplementedError()
 
-    def format_class(self, clazz):
+    def _add_class(self, clazz):
         raise NotImplementedError()
             
-    def format_method(self, method):
+    def _add_method(self, method):
         raise NotImplementedError()
+
+
+class MarkdownFormatter(Formatter):
+    pass
+
+
+class DotFormatter(Formatter):
+    NODE = 0
+    EDGE = 1
+
+    def _format(self, body) -> str:
+        body.sort(key=lambda x: (x[0], x[1]))
+        body = "\n".join(message for _, message in self._body)
+        header = f'digraph "classes" {{\ncharset="utf-8"\nrankdir=BT\n' 
+        return header + body + '\n}'
+
+    def _build(self):
+        for mod in traverse(self._modules):
+            for clazz in mod.classes(sort=False):
+                if clazz.name in self._markers:
+                    self._add_marker(clazz.name)
+                    
+                self._add_class(clazz)
+                all_methods = clazz.methods(include_inherited=False, sort=False)
+                for method in all_methods:
+                    self._add_method(method)
+
+    def _add_marker(self, marker):
+        return
+
+    def _add_class(self, clazz):
+        self._body.append((self.NODE, f'"{clazz.name}" [color=cyan3, label="{clazz.name}", shape="box"];'))
+        superclasses = [c.name for c in clazz.mro()]
+        if len(superclasses) > 0:
+            superclass = superclasses[0]
+            self._body.append((self.EDGE, f'"{clazz.name}" -> "{superclass}" [arrowhead="empty", arrowtail="none"];'))
+            
+    def _add_method(self, method):
+        return
 
 
 class LatexFormatter(Formatter):
-    def format_marker(self, marker):
-        print("\\vspace{10mm}")
-        print("\\subsection{" + self._markers[marker] + "}")
-        print()
-        print("\\vspace{-12mm}")
+    def _format(self, body) -> str:
+        return '\n'.join(body)
 
-    def format_class(self, clazz):
-        print("\\vspace{15mm}")
-        # class parsing
-        print("\\classname{" + clazz.name + "}\\vspace{3mm}\\newline")
+    def _add_marker(self, marker):
+        self._body.append("\\vspace{10mm}")
+        self._body.append("\\subsection{" + self._markers[marker] + "}")
+        self._body.append('\n')
+        self._body.append("\\vspace{-12mm}")
+
+    def _add_class(self, clazz):
+        self._body.append("\\vspace{15mm}")
+        self._body.append("\\classname{" + clazz.name + "}\\vspace{3mm}\\newline")
 
         superclasses = [c.name for c in clazz.mro()]
         if len(superclasses) > 0:
-            print("\\textbf{Inherits from " + markup(superclasses[0]) + "}\\newline")
+            self._body.append("\\textbf{Inherits from " + markup(superclasses[0]) + "}\\newline")
 
         class_doc = str(clazz.obj.__doc__)
-        print(method_to_latex(class_doc))
-
-        all_methods = clazz.methods(include_inherited=False, sort=False)
-        for method in all_methods:
-            self.format_method(method)
+        self._body.append(method_to_latex(class_doc))
             
-    def format_method(self, method):
-        print("\\vspace{8mm}")
+    def _add_method(self, method):
+        self._body.append("\\vspace{8mm}")
         params = ", ".join(method.params(annotate=True))
         method_signature = _sanitize(method.name)
         method_signature += "(" + convert_type(params) + ")"
@@ -81,11 +134,12 @@ class LatexFormatter(Formatter):
         if method_signature.startswith("\_\_init\_\_"): # pylint: disable=(anomalous-backslash-in-string)
             method_signature = "Constructor"
 
-        print("\\methodname{" + method_signature + "}\\vspace{2mm}\\newline")
+        self._body.append("\\methodname{" + method_signature + "}\\vspace{2mm}\\newline")
+        self._body.append(method_to_latex(method.docstring))
+        self._body.append('\n')
         
-        print(method_to_latex(method.docstring))
-        print()
-        
+
+# ---------------- HELPERS --------------------
 
 def _sanitize(text):
     return (text

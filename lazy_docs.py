@@ -1,7 +1,7 @@
 import argparse
 import os
 import sys
-from model import *
+from formatters import *
 
 DEFAULT_OUTPUT_FOLDER = os.getcwd() 
 
@@ -27,8 +27,11 @@ def main():
 
     # Generate docs from model
     markers = {}
-    f = LatexFormatter([file], markers)
-    f.export()
+    latex = LatexFormatter([file], markers)
+    latex.export(os.path.join(out, 'docs.tex'))
+
+    dot = DotFormatter([file], markers)
+    dot.export(os.path.join(out, 'classes.dot'))
 
 if __name__ == "__main__":
     main()
