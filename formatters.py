@@ -71,12 +71,18 @@ class MarkdownFormatter(Formatter):
 class DotFormatter(Formatter):
     NODE = 0
     EDGE = 1
+    RANK = 2
 
     def _format(self, body) -> str:
-        body.sort(key=lambda x: (x[0], x[1]))
-        body = "\n".join(message for _, message in self._body)
         header = f'digraph "classes" {{\ncharset="utf-8"\nrankdir=BT\n' 
-        return header + body + '\n}'
+
+        body.sort(key=lambda x: (x[0], x[1]))
+        body = "\n".join(message for code, message in self._body if code != self.RANK)
+
+        origin_classes = (f'"{name}"' for code, name in self._body if code == self.RANK)
+        body += f'\n{{ rank=same; {", ".join(origin_classes)} }}\n'
+
+        return header + body + '}'
 
     def _build(self):
         for mod in traverse(self._modules):
@@ -98,6 +104,8 @@ class DotFormatter(Formatter):
         if len(superclasses) > 0:
             superclass = superclasses[0]
             self._body.append((self.EDGE, f'"{clazz.name}" -> "{superclass}" [arrowhead="empty", arrowtail="none"];'))
+        else:
+            self._body.append((self.RANK, clazz.name))
             
     def _add_method(self, method):
         return
