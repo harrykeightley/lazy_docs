@@ -33,5 +33,8 @@ def main():
     dot = DotFormatter([file], markers)
     dot.export(os.path.join(out, 'classes.dot'))
 
+    md = MarkdownFormatter([file], markers)
+    md.export(os.path.join(out, 'docs.md'))
+
 if __name__ == "__main__":
     main()

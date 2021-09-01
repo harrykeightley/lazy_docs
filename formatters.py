@@ -65,7 +65,35 @@ class Formatter(object):
 
 
 class MarkdownFormatter(Formatter):
-    pass
+
+    def _format(self, body) -> str:
+        return '\n'.join(body)
+
+    def _add_marker(self, marker):
+        return
+
+    def _add_class(self, clazz):
+        self._body.append("# " + clazz.name)
+
+        superclasses = [c.name for c in clazz.mro()]
+        if len(superclasses) > 0:
+            self._body.append(f"Inherits from `{superclasses[0]}`")
+
+        class_doc = str(clazz.obj.__doc__)
+        self._body.append(f"doc: {class_doc}")
+            
+    def _add_method(self, method):
+        params = ", ".join(method.params(annotate=True))
+        method_signature = _sanitize(method.name)
+        method_signature += "(" + convert_type(params) + ")"
+        method_signature += " -> " + convert_type(method.return_annotation())
+
+        if method_signature.startswith("\_\_init\_\_"): # pylint: disable=(anomalous-backslash-in-string)
+            method_signature = "Constructor"
+
+        self._body.append(f"## `{method_signature}`")
+        self._body.append(method.docstring)
+        self._body.append('\n')
 
 
 class DotFormatter(Formatter):
