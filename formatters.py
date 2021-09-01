@@ -3,7 +3,6 @@ Stolen with love from Brae Webb.
 """
 
 import re
-import sys
 from typing import Dict, Iterable, List
 import pdoc
 from docstring_parser import parse
